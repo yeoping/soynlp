@@ -48,6 +48,7 @@ def lemma_candidate_chat(l, r, predefined=None, debug=False):
 
     candidates = lemma_candidate(l, r, predefined, debug)
     l_last = decompose(l[-1])
+    r_last = decompose(r[-1]) if r else ('', '', '')
 
     # 어미가 ㄷ, ㅂ, ㅅ, ㅇ, ㅋ, ㅎ 일 경우,
     # (아닏, 아닙, 아닛, 아닝, 아닠, 아닣)
@@ -57,6 +58,12 @@ def lemma_candidate_chat(l, r, predefined=None, debug=False):
         if debug:
             debug_message('마지막 종성이 이모티콘으로 의심되는 경우', l_, '()')
         candidates.update(lemma_candidate(l_, r, predefined, debug))
+        candidates.add((l_, ''))
+    elif r and character_is_emoticon(r_last[2]):
+        r_ = r[:-1] + compose(r_last[0], r_last[1], ' ')
+        if debug:
+            debug_message('어미의 종성이 이모티콘으로 의심되는 경우', l, r_)
+        candidates.update(lemma_candidate(l, r_, predefined, debug))
 
     return candidates
 
