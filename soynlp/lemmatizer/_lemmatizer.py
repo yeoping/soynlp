@@ -4,6 +4,25 @@ from soynlp.hangle import compose, decompose
 from ._conjugation import conjugate, conjugate_chat
 
 class Lemmatizer:
+    """
+    :param adjective_stems: set
+        Set of adjective stems
+    :param verb_stems: set
+        Set of verb stems
+    :param eomis: set
+        Set of eomis
+    :param formal_text: Boolean
+        Lemmatizer assume that text is formal (not chat data)
+        Default is True
+    :param predefined: dict
+        Dictionary of pre-lemmatized predicators
+        Default is following.
+        {
+            '끕니다':(('끌', 'ㅂ니다'), ('끄', 'ㅂ니다')),
+            '그래':(('그렇', '아'),),
+        }
+    """
+
     def __init__(self, adjective_stems, verb_stems,
         eomis, formal_text=True, predefined=None):
 
@@ -28,6 +47,14 @@ class Lemmatizer:
         }
 
     def get_candidates(self, word, debug=False):
+        """
+        :param word: str
+            Word to be lemmatized
+        :param debug: Boolean
+            If True, it shows candidates of lemma
+            Default is False.
+        """
+
         if word in self._predefined:
             return self._predefined[word]
 
@@ -58,6 +85,14 @@ class Lemmatizer:
         return lemmas
 
     def lemmatize(self, word, debug=False):
+        """
+        :param word: str
+            Word to be lemmatized
+        :param debug: Boolean
+            If True, it shows candidates of lemma
+            Default is False.
+        """
+
         def stem_tag(stem):
             if stem in self.adjectives:
                 yield 'Adjective'
@@ -73,6 +108,18 @@ def debug_message(message, l, r):
     print('{}: {} + {}'.format(message, l, r))
 
 def lemma_candidate_chat(l, r, predefined=None, debug=False):
+    """
+    :param l: str
+        Left part of word
+    :param r: str
+        Left part of word
+    :param predefined: dict
+        Dictionary of pre-lemmatized predicators
+    :param debug: Boolean
+        If True, it shows candidates of lemma
+        Default is False.
+    """
+
     def add_lemma(stem, ending):
         candidates.add((stem, ending))
 
@@ -101,6 +148,18 @@ def lemma_candidate_chat(l, r, predefined=None, debug=False):
     return candidates
 
 def lemma_candidate(l, r, predefined=None, debug=False):
+    """
+    :param l: str
+        Left part of word
+    :param r: str
+        Left part of word
+    :param predefined: dict
+        Dictionary of pre-lemmatized predicators
+    :param debug: Boolean
+        If True, it shows candidates of lemma
+        Default is False.
+    """
+
     def add_lemma(stem, ending):
         candidates.add((stem, ending))
 
