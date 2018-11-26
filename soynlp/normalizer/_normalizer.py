@@ -107,3 +107,6 @@ def normalize_sent_for_lrgraph(sent):
     if not sent_:
         return ''
     return ' '.join(sent_)
+
+def remove_doublespace(sent):
+    return doublespace_pattern.sub(' ', sent).strip()
