@@ -102,7 +102,7 @@ class Lemmatizer:
         candidates = self.get_candidates(word, debug)
         lemmas = [(stem, eomi, tag, 'Eomi') for stem, eomi in candidates
                   for tag in stem_tag(stem)]
-        return candidates
+        return lemmas
 
 def debug_message(message, l, r):
     print('{}: {} + {}'.format(message, l, r))
