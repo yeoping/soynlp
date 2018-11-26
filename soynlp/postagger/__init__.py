@@ -4,3 +4,4 @@ from ._template import BaseTemplateMatcher, EojeolTemplateMatcher, LRTemplateMat
 from ._tagger import BaseTagger, SimpleTagger
 from ._tagger import BasePostprocessor, UnknowLRPostprocessor
 from . import tagset
+from . import newstagger
