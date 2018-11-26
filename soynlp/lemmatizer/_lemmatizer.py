@@ -4,36 +4,69 @@ from soynlp.hangle import compose, decompose
 from ._conjugation import conjugate, conjugate_chat
 
 class Lemmatizer:
-    def __init__(self, stems, endings, predefined=None):
-        self._stems = stems
-        self._endings = endings
+    def __init__(self, adjective_stems, verb_stems,
+        eomis, formal_text=True, predefined=None):
+
+        self.adjectives = adjective_stems
+        self.verbs = verb_stems
+        self.eomis = eomis
+        self.stems = {stem for stem in adjective_stems}
+        self.stems.update({stem for stem in verb_stems})
+        self.formal_text = formal_text
+
+        if not formal_text:
+            self.eomis.add('')
+
         self._initialize()
         if predefined:
             self._predefined.update(predefined)
 
     def _initialize(self):
-        self._predefined = {'불어':('붇다', '불다'),
-                            '그래':('그렇다',)
-                           }
+        self._predefined = {
+            '끕니다':(('끌', 'ㅂ니다'), ('끄', 'ㅂ니다')),
+            '그래':(('그렇', '아'),),
+        }
 
-    def lemmatize(self, word, check_only_stem=False):
-        candidates = set()
+    def get_candidates(self, word, debug=False):
+        if word in self._predefined:
+            return self._predefined[word]
+
+        lemmas = set()
         for i in range(1, len(word)+1):
-            l, r = word[:i], word[i:]
-            for stem, ending in lemma_candidate(l, r, self._predefined):
-                if stem in self._stems:
-                    if check_only_stem:
-                        candidates.add((stem, ending))
-                    elif ending in self._endings:
-                        candidates.add((stem, ending))
-        return candidates
-
-    def candidates(self, word):
-        candidates = set()
-        for i in range(1, len(word) + 1):
             l = word[:i]
             r = word[i:]
-            candidates.update(self.lemma_candidate(l, r, self._predefined))
+
+            # lemmatization for formal text
+            candidates = lemma_candidate(l, r)
+            candidates = {lemma for lemma in candidates
+                if lemma[0] in self.stems and lemma[1] in self.eomis}
+
+            # lemmatization for informal text
+            if not candidates:
+                candidates = lemma_candidate_chat(l, r)
+            candidates = {lemma for lemma in candidates
+                if lemma[0] in self.stems and lemma[1] in self.eomis}
+
+            # update candidates
+            lemmas.update(candidates)
+
+        if debug:
+            print('lemmas')
+            for stem, eomi in lemmas:
+                print(' %s - %s' % (stem, eomi))
+
+        return lemmas
+
+    def lemmatize(self, word, debug=False):
+        def stem_tag(stem):
+            if stem in self.adjectives:
+                yield 'Adjective'
+            if stem in self.verbs:
+                yield 'Verb'
+
+        candidates = self.get_candidates(word, debug)
+        lemmas = [(stem, eomi, tag, 'Eomi') for stem, eomi in candidates
+                  for tag in stem_tag(stem)]
         return candidates
 
 def debug_message(message, l, r):
@@ -46,7 +79,7 @@ def lemma_candidate_chat(l, r, predefined=None, debug=False):
     def character_is_emoticon(c):
         return c in set('ㄷㅂㅅㅇㅋㅎ')
 
-    candidates = lemma_candidate(l, r, predefined, debug)
+    candidates = set()
     l_last = decompose(l[-1])
     r_last = decompose(r[-1]) if r else ('', '', '')
 
