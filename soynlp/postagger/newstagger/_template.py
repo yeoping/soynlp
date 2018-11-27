@@ -158,11 +158,50 @@ def template_lookup(eojeol, lemmatizer, dic, templates, max_len, offset=0):
                                 Eojeol(w0, w1, t0, t1, offset+b, offset+m, offset+e_)
                             )
 
+    # remove overlapped subwords
+    bindex_ = remove_sub(bindex_, offset)
+
     # add predicators
     for word in predicators:
         bindex_[word.b-offset].append(word)
 
     return bindex_
+
+def remove_sub(bindex, offset=0):
+    def exist_overlap_l(b, e, bindex):
+        for i in range(b, e):
+            for eojeol in bindex[i-offset]:
+                if (b < eojeol.m) and (eojeol.b < e):
+                    return True
+        return False
+
+    def skip(eojeol, bm_pair, me_pair):
+        for b, m, t in bm_pair:
+            if (not eojeol.w1) and (eojeol.b == b) and (eojeol.m == m) and (eojeol.t0 == t):
+                return True
+        for m, e, t in me_pair:
+            if (eojeol.w1) and (eojeol.m == m) and (eojeol.e < e) and (eojeol.t1 == t):
+                return True
+        return False
+
+    for b, eojeols in enumerate(bindex):
+        bm_pair = set()
+        me_pair = set()
+        for eojeol in eojeols:
+            r_b = eojeol.m
+            r_e = eojeol.e
+            if eojeol.w1 and not exist_overlap_l(r_b, r_e, bindex):
+                bm_pair.add((eojeol.b, r_b, eojeol.t0))
+                me_pair.add((r_b, r_e, eojeol.t1))
+
+        eojeols_ = []
+        for eojeol in eojeols:
+            if skip(eojeol, bm_pair, me_pair):
+                continue
+            eojeols_.append(eojeol)
+
+        bindex[b] = eojeols_
+    return bindex
 
 def lemmatize(word, lemmatizer, offset=0, ensure_hangle=False):
     def is_hangle(word):
