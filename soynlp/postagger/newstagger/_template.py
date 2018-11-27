@@ -1,4 +1,5 @@
 from collections import namedtuple
+from soynlp.hangle import character_is_complete_korean
 from soynlp.lemmatizer import Lemmatizer
 from soynlp.lemmatizer import lemma_candidate
 from soynlp.normalizer import remove_doublespace
@@ -154,8 +155,17 @@ def template_lookup(eojeol, lemmatizer, dic, templates, max_len, offset=0):
 
     return morphs_
 
-def lemmatize(word, lemmatizer, offset=0):
+def lemmatize(word, lemmatizer, offset=0, ensure_hangle=False):
+    def is_hangle(word):
+        for c in word:
+            if not character_is_complete_korean(c):
+                return False
+        return True
+
     morphs = []
+    if not ensure_hangle and not is_hangle(word):
+        return []
+
     for w0, w1, t0, t1 in lemmatizer.lemmatize(word):
         morphs.append(
             Eojeol(w0, w1, t0, t1, offset, offset+len(w0), offset+len(word))
