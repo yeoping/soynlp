@@ -15,6 +15,44 @@ class Eojeol(namedtuple('Eojeol', 'w0 w1 t0 t1 b m e')):
             self.b, self.e, self.w0, self.t0, self.w1, self.t1)
 
 
+class LookupBuffer:
+    def __init__(self, lookup, preanalyzed=None):
+        if preanalyzed is None:
+            preanalyzed = {}
+        self.buffer = preanalyzed
+        self._buffer_counter = {k:0 for k in preanalyzed}
+        self.lookup = lookup
+
+    def __call__(self, sentence):
+        return self.sentence_lookup(sentence)
+
+    def sentence_lookup(self, sentence):
+        sentence = remove_doublespace(sentence)
+        sent = []
+        for eojeol in sentence.split():
+            sent += self.eojeol_lookup(eojeol, len(sent))
+        return sent
+
+    def eojeol_lookup(self, eojeol, offset=0):
+        count = self._buffer_counter.get(eojeol, 0)
+        if count == 0:
+            result = self.lookup.eojeol_lookup(eojeol, offset)
+            self.buffer[eojeol] = result
+        else:
+            result = self.buffer[eojeol]
+        self._buffer_counter[eojeol] = count + 1
+        return result
+
+    def compatify_buffer(self, topk=100000):
+        if len(self._buffer_counter) <= topk:
+            return self
+        self._buffer_counter = dict(sorted(
+            self._buffer_counter.items(), key=lambda x:-x[1])[:topk])
+        self.buffer = dict(filter(
+            lambda x:x[0] in self._buffer_counter, self.buffer.items()))
+        return self
+
+
 class LRLookup:
     def __init__(self, pos_to_words, max_word_len=0):
         self.pos_to_words = pos_to_words
@@ -25,7 +63,7 @@ class LRLookup:
             self._check_max_word_len()
 
     def __call__(self, sentence):
-        return self._sentence_lookup(sentence)
+        return self.sentence_lookup(sentence)
 
     def _check_max_word_len(self):
         if not self.pos_to_words:
@@ -44,14 +82,14 @@ class LRLookup:
         )
         return lemmatizer
 
-    def _sentence_lookup(self, sentence):
+    def sentence_lookup(self, sentence):
         sentence = remove_doublespace(sentence)
         sent = []
         for eojeol in sentence.split():
-            sent += self._eojeol_lookup(eojeol, len(sent))
+            sent += self.eojeol_lookup(eojeol, len(sent))
         return sent
 
-    def _eojeol_lookup(self, eojeol, offset):
+    def eojeol_lookup(self, eojeol, offset=0):
         return lr_lookup(eojeol, self.lemmatizer,
             self.pos_to_words, offset)
 
@@ -90,7 +128,7 @@ class TemplateLookup(LRLookup):
                 raise ValueError(message)
         return sorted(set(templates), key=lambda x:len(x))
 
-    def _eojeol_lookup(self, eojeol, offset):
+    def eojeol_lookup(self, eojeol, offset=0):
         return template_lookup(eojeol, self.lemmatizer,
             self.pos_to_words, self.templates,
             self.max_word_len, offset)
