@@ -127,7 +127,7 @@ def template_lookup(eojeol, lemmatizer, dic, templates, max_len, offset=0):
     for b in range(n):
         for e in range(b+1, min(b+max_len, n)+1):
             sub = eojeol[b:e]
-            predicators.update(lemmatize(sub, lemmatizer, b))
+            predicators.update(lemmatize(sub, lemmatizer, offset+b))
             for tag in get_tag(sub, dic):
                 morphs[b].append((sub, tag, b, e))
 
@@ -138,18 +138,18 @@ def template_lookup(eojeol, lemmatizer, dic, templates, max_len, offset=0):
             for t in templates:                
                 if len(t) == 1 and t0 == t[0]:
                     morphs_[b].append(
-                        Eojeol(w0, '', t0, None, b, e, e)
+                        Eojeol(w0, '', t0, None, offset+b, offset+e, offset+e)
                     )
                 elif e < n and len(t) == 2 and t0 == t[0]:
                     for w1, t1, m, e_ in morphs[e]:
                         if t1 == t[1]:
                             morphs_[b].append(
-                                Eojeol(w0, w1, t0, t1, b, m, e_)
+                                Eojeol(w0, w1, t0, t1, offset+b, offset+m, offset+e_)
                             )
 
     # add predicators
     for word in predicators:
-        morphs_[word.b].append(word)
+        morphs_[word.b-offset].append(word)
 
     return morphs_
 
