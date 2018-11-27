@@ -59,14 +59,14 @@ class TemplateLookup(LRLookup):
         if templates is None:
             templates = [
                 ('Noun',),
-                ('Noun', 'Josa'),
                 ('Pronoun',),
-                ('Pronoun', 'Josa'),
                 ('Adverb', ),
-                ('Adverb', 'Josa'),
-                ('Exclamation',)
+                ('Exclamation',),
+                ('Noun', 'Josa'),
+                ('Pronoun', 'Josa'),
+                ('Adverb', 'Josa')
             ]
-        self._template_format_check(templates)
+        templates = self._template_format_check(templates)
         self.templates = templates
 
     def _template_format_check(self, templates):
@@ -75,6 +75,7 @@ class TemplateLookup(LRLookup):
                 message = ''.join(('Template length shoudl be less than 2',
                     '{} has {} words'.format(t, len(t))))
                 raise ValueError(message)
+        return sorted(templates, key=lambda x:len(x))
 
     def _sentence_lookup(self, sentence):
         sentence = remove_doublespace(sentence)
