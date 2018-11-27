@@ -67,16 +67,25 @@ class TemplateLookup(LRLookup):
                 ('Pronoun', 'Josa'),
                 ('Adverb', 'Josa')
             ]
+        self.set_templates(templates)
+
+    def append_templates(self, template):
+        if isinstance(template, str):
+            template = [(template,)]
+        templates = [t for t in self.templates] + template
+        self.set_templates(templates)
+
+    def set_templates(self, templates):
         templates = self._template_format_check(templates)
         self.templates = templates
 
     def _template_format_check(self, templates):
         for t in templates:
             if len(t) > 2:
-                message = ''.join(('Template length shoudl be less than 2',
+                message = ''.join(('Template length should be less than 2',
                     '{} has {} words'.format(t, len(t))))
                 raise ValueError(message)
-        return sorted(templates, key=lambda x:len(x))
+        return sorted(set(templates), key=lambda x:len(x))
 
     def _sentence_lookup(self, sentence):
         sentence = remove_doublespace(sentence)
