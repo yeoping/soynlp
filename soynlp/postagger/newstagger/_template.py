@@ -99,11 +99,11 @@ class TemplateLookup(LRLookup):
 
 def lr_lookup(eojeol, lemmatizer, dic, offset=0):
     n = len(eojeol)
-    morphs = [[] for _ in range(n)]
+    bindex = [[] for _ in range(n)]
 
     # Adjective or Verb
     predicators = lemmatize(eojeol, lemmatizer, offset)
-    morphs[0] = predicators
+    bindex[0] = predicators
 
     for i in range(1, n+1):
         l = eojeol[:i]
@@ -111,7 +111,7 @@ def lr_lookup(eojeol, lemmatizer, dic, offset=0):
 
         # Noun + Josa
         if check_tag(l, 'Noun', dic) and check_tag(r, 'Josa', dic):
-            morphs[0].append(
+            bindex[0].append(
                 Eojeol(l, r, 'Noun', 'Josa', offset, offset+i, offset+n)
             )
 
@@ -121,48 +121,48 @@ def lr_lookup(eojeol, lemmatizer, dic, offset=0):
         # Noun / Adjective / Verb + Adjective / Verb
         if (check_tag(l, 'Noun', dic) or l_pred) and r_pred:
             if check_tag(l, 'Noun', dic):
-                morphs[0].append(
+                bindex[0].append(
                     Eojeol(l, '', 'Noun', None, offset, offset+i, offset+i)
                 )
             else:
-                morphs[0] += l_pred
-            morphs[i] += r_pred
-    return morphs
+                bindex[0] += l_pred
+            bindex[i] += r_pred
+    return bindex
 
 def template_lookup(eojeol, lemmatizer, dic, templates, max_len, offset=0):
     n = len(eojeol)
 
     # string match
-    morphs = [[] for _ in range(n)]
+    bindex = [[] for _ in range(n)]
     predicators = set()
     for b in range(n):
         for e in range(b+1, min(b+max_len, n)+1):
             sub = eojeol[b:e]
             predicators.update(lemmatize(sub, lemmatizer, offset+b))
             for tag in get_tag(sub, dic):
-                morphs[b].append((sub, tag, b, e))
+                bindex[b].append((sub, tag, b, e))
 
     # as Eojeol
-    morphs_ = [[] for _ in range(n)]
-    for morph_list in morphs:
-        for w0, t0, b, e in morph_list:
+    bindex_ = [[] for _ in range(n)]
+    for morphs in bindex:
+        for w0, t0, b, e in morphs:
             for t in templates:                
                 if len(t) == 1 and t0 == t[0]:
-                    morphs_[b].append(
+                    bindex_[b].append(
                         Eojeol(w0, '', t0, None, offset+b, offset+e, offset+e)
                     )
                 elif e < n and len(t) == 2 and t0 == t[0]:
-                    for w1, t1, m, e_ in morphs[e]:
+                    for w1, t1, m, e_ in bindex[e]:
                         if t1 == t[1]:
-                            morphs_[b].append(
+                            bindex_[b].append(
                                 Eojeol(w0, w1, t0, t1, offset+b, offset+m, offset+e_)
                             )
 
     # add predicators
     for word in predicators:
-        morphs_[word.b-offset].append(word)
+        bindex_[word.b-offset].append(word)
 
-    return morphs_
+    return bindex_
 
 def lemmatize(word, lemmatizer, offset=0, ensure_hangle=False):
     def is_hangle(word):
