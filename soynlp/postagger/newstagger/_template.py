@@ -48,9 +48,12 @@ class LRLookup:
         sentence = remove_doublespace(sentence)
         sent = []
         for eojeol in sentence.split():
-            sent += lr_lookup(eojeol, self.lemmatizer,
-                self.pos_to_words, len(sent))
+            sent += self._eojeol_lookup(eojeol, len(sent))
         return sent
+
+    def _eojeol_lookup(self, eojeol, offset):
+        return lr_lookup(eojeol, self.lemmatizer,
+            self.pos_to_words, offset)
 
 
 class TemplateLookup(LRLookup):
@@ -87,15 +90,10 @@ class TemplateLookup(LRLookup):
                 raise ValueError(message)
         return sorted(set(templates), key=lambda x:len(x))
 
-    def _sentence_lookup(self, sentence):
-        sentence = remove_doublespace(sentence)
-        sent = []
-        for eojeol in sentence.split():
-            sent += template_lookup(eojeol, self.lemmatizer,
-                self.pos_to_words, self.templates,
-                self.max_word_len, len(sent))
-        return sent
-
+    def _eojeol_lookup(self, eojeol, offset):
+        return template_lookup(eojeol, self.lemmatizer,
+            self.pos_to_words, self.templates,
+            self.max_word_len, offset)
 
 def lr_lookup(eojeol, lemmatizer, dic, offset=0):
     n = len(eojeol)
