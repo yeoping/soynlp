@@ -10,7 +10,8 @@ class Eojeol(namedtuple('Eojeol', 'w0 w1 t0 t1 b m e')):
         else:
             return '%s/%s' % (self.w0, self.t0)
     def __repr__(self):
-        return self.__str__()
+        return '[%d, %d, %s/%s + %s/%s]' % (
+            self.b, self.e, self.w0, self.t0, self.w1, self.t1)
 
 
 class LRLookup:
