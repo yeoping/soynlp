@@ -54,11 +54,14 @@ class LookupBuffer:
 
 
 class LRLookup:
-    def __init__(self, pos_to_words, max_word_len=0):
+    def __init__(self, pos_to_words, max_word_len=0, lemmatizer=None):
         self.pos_to_words = pos_to_words
         self.max_word_len = max_word_len
         self.formal_text = True
-        self.lemmatizer = self._set_lemmatizer()
+        if lemmatizer is None:
+            self.lemmatizer = self._set_lemmatizer()
+        else:
+            self.lemmatizer = lemmatizer
         if max_word_len == 0:
             self._check_max_word_len()
 
@@ -68,10 +71,11 @@ class LRLookup:
     def _check_max_word_len(self):
         if not self.pos_to_words:
             raise ValueError('pos_to_words should not be empty')
-        self.max_word_len = max(
-            max(len(word) for word in words)
-            for words in self.pos_to_words.values()
-        )
+        for words in self.pos_to_words.values():
+            if not words:
+                continue
+            max_ = max(len(word) for word in words)
+            self.max_word_len = max(max_, self.max_word_len)
 
     def _set_lemmatizer(self):
         lemmatizer = Lemmatizer(
@@ -95,9 +99,9 @@ class LRLookup:
 
 
 class TemplateLookup(LRLookup):
-    def __init__(self, pos_to_words, templates=None, formal_text=False):
+    def __init__(self, pos_to_words, templates=None, formal_text=False, lemmatizer=None):
         self.formal_text = formal_text
-        super().__init__(pos_to_words)
+        super().__init__(pos_to_words, lemmatizer=lemmatizer)
         if templates is None:
             templates = [
                 ('Noun',),
