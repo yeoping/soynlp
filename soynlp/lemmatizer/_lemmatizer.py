@@ -24,7 +24,7 @@ class Lemmatizer:
     """
 
     def __init__(self, adjective_stems, verb_stems,
-        eomis, formal_text=True, predefined=None):
+        eomis, formal_text=True, predefined=None, use_buffer=False):
 
         self.adjectives = adjective_stems
         self.verbs = verb_stems
@@ -32,6 +32,7 @@ class Lemmatizer:
         self.stems = {stem for stem in adjective_stems}
         self.stems.update({stem for stem in verb_stems})
         self.formal_text = formal_text
+        self._use_buffer = use_buffer
 
         if not formal_text:
             self.eomis.add('')
@@ -39,6 +40,9 @@ class Lemmatizer:
         self._initialize()
         if predefined:
             self._predefined.update(predefined)
+
+        self._buffer = {}
+        self._buffer_counter = {}
 
     def _initialize(self):
         self._predefined = {
@@ -93,6 +97,20 @@ class Lemmatizer:
             Default is False.
         """
 
+        if self._use_buffer:
+            count = self._buffer_counter.get(word, 0) + 1
+            if word in self._buffer:
+                self._buffer_counter[word] = count
+                return self._buffer[word]
+            else:
+                result = self._lemmatize(word, debug)
+                self._buffer_counter[word] = count
+                self._buffer[word] = result
+                return result
+        else:
+            return self._lemmatize(word, debug)
+
+    def _lemmatize(self, word, debug):
         def stem_tag(stem):
             if stem in self.adjectives:
                 yield 'Adjective'
@@ -100,9 +118,18 @@ class Lemmatizer:
                 yield 'Verb'
 
         candidates = self.get_candidates(word, debug)
-        lemmas = [(stem, eomi, tag, 'Eomi') for stem, eomi in candidates
-                  for tag in stem_tag(stem)]
+        lemmas = tuple((stem, eomi, tag, 'Eomi') for stem, eomi in candidates
+                       for tag in stem_tag(stem))
         return lemmas
+
+    def compatify_buffer(self, topk=100000):
+        if len(self._buffer) > topk:
+            self._buffer_counter = dict(sorted(
+                self._buffer_counter.items(), key=lambda x:-x[1])[:topk]
+            )
+            self._buffer = dict(filter(
+                lambda x:x[0] in self._buffer_counter, self._buffer.items()
+            ))
 
 def debug_message(message, l, r):
     print('{}: {} + {}'.format(message, l, r))
