@@ -33,3 +33,18 @@ def to_adjacent_tree(bindex):
                 continue
             tree[eojeol] = bindex_[adj_idx]
     return tree
+
+def cooccurrence(sents):
+    def to_dict(dd):
+        return {base:dict(d) for base, d in dd.items()}
+
+    ddp = defaultdict(lambda: defaultdict(int)) # previous
+    ddf = defaultdict(lambda: defaultdict(int)) # following
+    for i, sent in enumerate(sents):
+        bindex = lookup_buffer(sent)
+        tree = to_adjacent_tree(bindex)
+        for base, adjacents in tree.items():
+            for adj in adjacents:
+                ddf[base][adj] += 1
+                ddp[adj][base] += 1
+    return to_dict(ddp), to_dict(ddf)
