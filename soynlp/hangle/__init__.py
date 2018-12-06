@@ -12,4 +12,4 @@ from ._hangle import character_is_moum
 from ._hangle import to_base
 from ._hangle import character_is_number
 from ._hangle import character_is_english
-from ._hangle import ConvolutionHangleEncoder
+from ._hangle import HangleCNNEncoder

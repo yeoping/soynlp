@@ -127,63 +127,100 @@ def character_is_punctuation(i):
     i = to_base(i)
     return (i == 33 or i == 34 or i == 39 or i == 44 or i == 46 or i == 63 or i == 96)
 
-class ConvolutionHangleEncoder:
-    """초/중/종성을 구성하는 자음/모음과 띄어쓰기만 인코딩
-    one hot vector [ㄱ, ㄴ, ㄷ, ... ㅎ, ㅏ, ㅐ, .. ㅢ, ㅣ,"  ", ㄱ, ㄲ, ... ㅍ, ㅎ,"  ", 0, 1, 2, .. 9]
-    """
+class HangleCNNEncoder:
     def __init__(self):
-        self.jung_begin = 19 # len(chosung_list)
-        self.jong_begin = 40 # self.jung_begin + len(jungsung_list)
-        self.number_begin = 68 # self.jong_begin + len(jongsung_list)
-        self.space = 78 # len(chosung_list) + len(jungsung_list) + len(jongsung_list) + 10
-        self.dim = 79
-    
-    def encode(self, sent):
+        """
+        0 ~ 18 : [ㄱ, ㄴ, ... , ㅎ] 초성
+        19 ~ 39 : [ㅏ, ㅑ, ... ㅣ] 중성
+        40 ~ 67 : [ㄱ, ㄳ, ㄴ, ..., ㅎ] 종성
+        68 ~ 77 : [0, 1, ..., 9] 숫자
+        78 : white space
+        79 : padding
+        80 characters
+        """
+        self.jung_begin = 19
+        self.jong_begin = 40
+        self.number_begin = 68
+        self.space = 78
+        self.padding = 79
+        self.padding_symbol = '_'
+        self.dim = 80
+
+    def encode(self, sent, image_size=-1):
+
+        # one hot representation of sentence
         onehot = self.sent_to_onehot(sent)
-        x = np.zeros((len(onehot), self.dim))
+
+        # check image size
+        if image_size == -1:
+            n = len(onehot)
+        else:
+            n = image_size
+            if len(onehot) > n:
+                onehot = onehot[:n]
+
+        # sentence image
+        x = np.zeros((n, self.dim))
         for i, xi in enumerate(onehot):
             for j in xi:
                 x[i,j] = 1
+
+        # padding
+        for p in range(i+1, n):
+            x[p, self.padding] = 1
         return x
-    
-    def sent_to_onehot(self, sent):
+
+    def sent_to_onehot(self, sent, image_size=-1):
+        # remain only hangle and number
         sent = self._normalize(sent)
         sent = [ord(c) for c in sent]
+
+        # one hot encoding
         sent_ = []
         for i in sent:
-            if i == 32: sent_.append((self.space,))
-            elif 48 <= i <= 57: sent_.append((i - 48 + self.number_begin, ))
-            else: sent_.append(self._decompose(i))
+            if i == 32:
+                sent_.append((self.space,))
+            elif 48 <= i <= 57:
+                sent_.append((i - 48 + self.number_begin,))
+            else:
+                sent_.append(self._decompose(i))
+
+        # padding
+        if image_size > 0 and image_size > len(sent_):
+            sent_ += [(self.padding,)] * (image_size - len(sent_))
+
         return sent_
-    
+
     def onehot_to_sent(self, encoded_sent):
         chars = []
+
         for c in encoded_sent:
+
+            # symbol decoding
             if len(c) == 1:
-                idx = c[0] - self.number_begin
-                if idx == 10:
+                idx = c[0]
+                if idx == self.space:
                     chars.append(' ')
-                elif 0 <= idx < 10:
-                    chars.append(str(idx))
-                else:
-                    chars.append(None)
+                elif 68 <= idx < 77:
+                    chars.append(str(idx - 68))
+
+            # hangle decoding
             elif len(c) == 3:
                 cho, jung, jong = c
-                if (0 <= cho < self.jung_begin) and (self.jung_begin <= jung < self.jong_begin) and (self.jong_begin <= jong < self.number_begin):
-                    chars.append(compose(chosung_list[cho], jungsung_list[jung - self.jung_begin], jongsung_list[jong - self.jong_begin]))
-                else:
-                    chars.append(None)
-            else:
-                chars.append(None)
-        return ''.join(chars)
-        
+                if ((0 <= cho < 19) and (19 <= jung < 40) and (40 <= jong < 68)):
+                    cho_ = chosung_list[cho]
+                    jung_ = jungsung_list[jung - self.jung_begin]
+                    jong_ = jongsung_list[jong - self.jong_begin]
+                    chars.append(compose(cho_, jung_, jong_))
+
+        return chars
+
     def _normalize(self, sent):
-        import re
         regex = re.compile('[^ㄱ-ㅎㅏ-ㅣ가-힣 0-9]')
-        sent = regex.sub(' ', sent)
+        sent = regex.sub(' ', sent).strip()
         sent = doublespace_pattern.sub(' ', sent)
         return sent
-        
+
     def _compose(self, cho, jung, jong):
         return chr(kor_begin + chosung_base * cho + jungsung_base * jung + jong)
 
@@ -194,6 +231,6 @@ class ConvolutionHangleEncoder:
             return (i - moum_begin,)
         i -= kor_begin
         cho  = i // chosung_base
-        jung = ( i - cho * chosung_base ) // jungsung_base 
-        jong = ( i - cho * chosung_base - jung * jungsung_base )    
+        jung = ( i - cho * chosung_base ) // jungsung_base
+        jong = ( i - cho * chosung_base - jung * jungsung_base )
         return (cho, self.jung_begin + jung, self.jong_begin + jong)
