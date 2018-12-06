@@ -166,7 +166,7 @@ class HangleCNNEncoder:
                 x[i,j] = 1
 
         # padding
-        for p in range(i+1, n):
+        for p in range(len(onehot), n):
             x[p, self.padding] = 1
         return x
 
